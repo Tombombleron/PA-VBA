@@ -1,0 +1,36 @@
+Attribute VB_Name = "WrapIfErrorWrap"
+Sub IfErrorWrap()
+Attribute IfErrorWrap.VB_ProcData.VB_Invoke_Func = "E\n14"
+
+    ' saved in PERSONAL.XLSB
+    ' wraps each formula within the selection in an IFERROR
+    ' allows the user to enter the value they would like IFERROR.
+    ' doesn't allow "" :/
+
+    Dim c As Range
+    Dim ErrorVal As String
+    
+    ErrorVal = InputBox("Please enter the value you want to display if there is an error", "Error Value Input", "")
+    
+    If ErrorVal = vbNullString Then
+        Exit Sub
+    Else
+        With Application
+            .ScreenUpdating = False
+            .Calculation = xlCalculationManual
+        End With
+        
+        For Each c In Selection.Cells
+            If c.HasFormula And Not c.HasArray Then
+                    c.Formula = "=IFERROR(" & Right(c.Formula, Len(c.Formula) - 1) & "," & Chr(34) & ErrorVal & Chr(34) & ")"
+            End If
+        Next c
+    
+        With Application
+            .ScreenUpdating = True
+            .Calculation = xlCalculationAutomatic
+        End With
+
+    End If
+
+End Sub
