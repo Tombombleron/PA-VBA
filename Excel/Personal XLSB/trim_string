@@ -1,0 +1,17 @@
+Attribute VB_Name = "trimstring"
+Sub trimselect()
+
+    ' saved in PERSONAL.XLSB
+    ' trims any cells which aren't empty
+    ' useful for data cleaning on the fly
+
+    If Selection.Count > 0 Then
+        For Each cl In Selection
+            If cl.Value2 <> "" Then
+                cl.Value2 = Trim(cl.Value2)
+            End If
+        Next cl
+    End If
+
+End Sub
+
