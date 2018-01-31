@@ -1,0 +1,24 @@
+Attribute VB_Name = "TextToNumbers"
+Sub ConvertTextToNumber()
+Attribute ConvertTextToNumber.VB_ProcData.VB_Invoke_Func = "j\n14"
+
+    ' saved in PERSONAL.XLSB
+    ' converts every instance of text within the selection to a number
+
+    Dim c As Range
+    
+    If Selection.Count > 1 Then
+    
+        For Each c In Selection
+            If IsNumeric(c) And c <> "" Then c.Value = Val(c.Value)
+        Next c
+        
+    Else
+    
+        For Each c In ActiveSheet.UsedRange
+            If IsNumeric(c) And c <> "" Then c.Value = Val(c.Value)
+        Next c
+        
+    End If
+
+End Sub
