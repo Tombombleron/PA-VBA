@@ -1,0 +1,40 @@
+Attribute VB_Name = "EmailCurrWB"
+Sub EmailThisFile()
+Attribute EmailThisFile.VB_ProcData.VB_Invoke_Func = "e\n14"
+
+    ' few comments really needed here. ¯\_( :) )_/¯
+    ' this is in my PERSONAL.XLSB and provides a nice, quick way
+    ' of emailing whatever you're working on to your boss using
+    ' just a keyboard shortcut.
+
+    Dim OutApp As Object
+    Dim OutMail As Object
+    Dim Subject As String
+    
+    Application.ScreenUpdating = False
+    
+    ActiveWorkbook.Save
+
+    Subject = InputBox("Please type the subject line here", "Subject", "Robert Green")
+
+    If Subject = vbnullvalue Then
+        Exit Sub
+    Else
+        Set OutApp = CreateObject("Outlook.Application")
+    
+        Set OutMail = OutApp.CreateItem(0)
+        On Error Resume Next
+        With OutMail
+            .To = ""
+            .Subject = Subject
+            .Attachments.Add Application.ActiveWorkbook.FullName
+            .Display
+            Set OutMail = Nothing
+        End With
+    End If
+    
+cleanup:
+    Set OutApp = Nothing
+    Application.ScreenUpdating = True
+    
+End Sub
