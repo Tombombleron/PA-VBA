@@ -1,4 +1,4 @@
-.bas diff
+*.bas text
 
 *.gitattributes text
 .gitignore text
