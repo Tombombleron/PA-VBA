@@ -1,0 +1,13 @@
+Attribute VB_Name = "PasteValues"
+Sub pastvalues()
+Attribute pastvalues.VB_ProcData.VB_Invoke_Func = "V\n14"
+
+    ' saved in PERSONAL.XLSB
+    ' shortcut assigned to Ctrl + Shft + V
+    ' saves a surprising amount of time.
+
+    If Selection.Count > 1 Then
+        Selection.Value2 = Selection.Value2
+    End If
+
+End Sub
