@@ -13,7 +13,9 @@ Excel is used largely for ad-hoc reporting, and the generation and sending of a 
 
 ### send_ssc_emails
 
-This script eliminated ~90 minutes of work each morning. The original process included:
+This script eliminated \~90 minutes of work each morning. The original process included:
 - Manually creating emails with concatenated strings from a CSV for subjects,
 - Attaching a file with the same name as one record in the CSV,
 - Sending them to the same email address.
+
+The script takes between 3 and 5 minutes to run on its own now. The reason it takes so long is a result of the awkward way of sending each email to comply with the receiving server's 'anti-spam' protocols.
