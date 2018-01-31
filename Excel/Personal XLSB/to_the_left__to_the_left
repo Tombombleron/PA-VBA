@@ -1,0 +1,24 @@
+Attribute VB_Name = "SelectTopLeft"
+Sub selectTopRight()
+Attribute selectTopRight.VB_ProcData.VB_Invoke_Func = "m\n14"
+
+    ' saved in PERSONAL.XLSB
+    ' runs through each sheet in the workbook
+    ' and selects cell A1
+
+    Dim ws As Worksheet
+    
+    ActiveWorkbook.Activate
+    
+    For Each ws In Worksheets
+        ws.Activate
+        Application.Goto Cells(1, 1), True
+        ActiveWindow.VisibleRange(1, 1).Select
+    Next ws
+    On Error GoTo 0
+
+    If Sheets(1).Visible = True Then
+        Sheets(1).Select
+    End If
+
+End Sub
