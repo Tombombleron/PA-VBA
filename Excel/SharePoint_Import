@@ -1,0 +1,152 @@
+Attribute VB_Name = "deleteInactive"
+Sub removeOldCards()
+    
+    Dim lastRow As Long, firstRow As Long, lngLastRow As Long, lastNameCell As Long
+    Dim statusArr As Variant: statusArr = Array("A", "F", "B", "L")
+    Dim finalCardCount As String, statusVal As String, cardVal As String, emailVal As String, blankCount As String
+    Dim xlWB As Workbook: Set xlWB = ThisWorkbook
+    Dim xlWS As Worksheet: Set xlWS = xlWB.Worksheets(1)
+    Dim argTwo As Range
+    
+    xlWB.Worksheets(2).Activate
+    Set argTwo = xlWB.Worksheets(2).Range(Range("A1"), Range("D1").End(xlDown))
+    
+    Application.ScreenUpdating = False
+    
+    firstRow = xlWS.Range("A3").Row
+    lastRow = xlWS.Range("A3").End(xlDown).Row
+    
+    For lngLastRow = lastRow To 3 Step -1
+    ' deletes any rows which have a code different to one of the values in statusArr
+    ' this will only leave rows with credit cards which are currently active
+        statusVal = xlWS.Range("A" & lngLastRow).Value
+        cardVal = xlWS.Range("C" & lngLastRow).Value
+        xlWS.Range("C" & lngLastRow).Value = "XXXX-XXXX-XX" & Mid(cardVal, 11, 2) & "-" & Right(cardVal, 4)
+        If statusVal <> "" And IsInArray(statusVal, statusArr) Then
+            xlWS.Range("A" & lngLastRow).EntireRow.Delete
+        Else
+        ' if the email address is the company email address then insert everything
+        ' before the @ symbol into column i and set the colour to white.
+            emailVal = xlWS.Range("G" & lngLastRow).Value
+            If emailVal Like "*COMPANY_NAME*" Or emailVal Like "*company_name*" Then
+            With xlWS.Range("I" & lngLastRow)
+                .Value = LCase(Left(emailVal, InStr(1, emailVal, "@", vbBinaryCompare) - 1))
+                .Interior.ColorIndex = 0
+            End With
+            Else
+            '~~~~~~~~~~~~~~~~~~~
+            ' each time the report is run, I will append the non-work email and corresponding id onto another
+            ' sheet so that the below vLookUp can fill in the ids for non work emails each time the procedure is run.
+            On Error Resume Next
+                xlWS.Range("I" & lngLastRow).Value = Application.WorksheetFunction.VLookup(emailVal, argTwo, 4, False)
+                '~~~~~~~~~~~~~~~~~~~~
+            End If
+        End If
+    Next lngLastRow
+    
+    With xlWS
+        .Activate
+        .Columns("A:G").AutoFit
+        End With
+    
+    ' displays a messagebox with the count of all the remaining rows and the number of blank values
+    ' in the id column. any blank values will need to be manually filled using a database.
+    finalCardCount = ThisWorkbook.Worksheets(1).Range(Range("A3"), Range("A3").End(xlDown)).Count
+    lastNameCell = xlWS.Range("I3000").End(xlUp).Row
+    blankCount = WorksheetFunction.CountBlank(xlWS.Range("I3:I" & lastNameCell))
+    MsgBox "There are " & finalCardCount & " active credit cards." & vbNewLine & "There are " & blankCount & " blank values."
+    
+    Application.ScreenUpdating = True
+    '~~~~~~~~~~~~~
+End Sub
+Function IsInArray(stringToBeFound As String, arr As Variant) As Boolean
+  
+    IsInArray = (UBound(Filter(arr, stringToBeFound)) > -1)
+
+End Function
+Sub exportToGYSACSV()
+
+    Dim xlWB As Workbook, thisWB As Workbook
+    Dim xlWS As Worksheet, thisWS As Worksheet
+    Dim knoxID As Range, numCCYLim As Range, targetPaste As Range
+    Dim pasteLength As Long
+    Dim filePath As String, fileName As String: filePath = "D:\Users\admin\Documents\Import\"
+    
+    fileName = "Exports\CC_CSVImport " & Format(Date, "dd-mm-yy") & ".csv"
+    
+    Application.ScreenUpdating = False
+    
+    ' opens a template file and pastes all the columns into the template
+    ' before saving it into a new folder, ready for upload into the sharepoint server
+    Set xlWB = Workbooks.Open(filePath & "CC_CSVImport.csv")
+    Set xlWS = xlWB.Worksheets(1)
+    Set thisWB = ThisWorkbook
+    Set thisWS = thisWB.Sheets("Sheet1")
+    
+    With thisWS
+        .Activate
+        .Select
+    End With
+    
+    Set knoxID = thisWS.Range(Range("I3"), Range("I3").End(xlDown))
+    pasteLength = knoxID.Count
+    
+    With xlWS
+        .Activate
+        .Range(Range("A10"), Range("A" & 10 + (pasteLength - 1))).Value = knoxID.Value
+    End With
+    
+    With thisWS
+        .Activate
+        .Select
+    End With
+    
+    Set numCCYLim = thisWS.Range(Range("C3"), Range("E3").End(xlDown))
+    pasteLength = thisWS.Range(Range("C3"), Range("C3").End(xlDown)).Count
+    
+    With xlWS
+        .Activate
+        .Range("B10:D" & 10 + (pasteLength - 1)).Value = numCCYLim.Value
+    End With
+    
+    With xlWB
+        .SaveAs filePath & fileName, xlCSV
+        .Save
+        .Close (True)
+    End With
+    
+    MsgBox "The file has been exported to " & filePath & fileName
+    
+    Application.ScreenUpdating = True
+    
+End Sub
+Sub cleanColI()
+
+    With ThisWorkbook.Worksheets(1).Range("A3:I10000")
+        .ClearContents
+        .ClearFormats
+    End With
+
+End Sub
+Sub moveErrVals()
+
+    Dim iterVal As Long
+    Dim valCol As Range
+    Set valCol = Range("K3:K3000")
+    Dim xlWB As Workbook
+    Dim xlWS As Worksheet
+    
+    Set xlWB = ThisWorkbook
+    Set xlWS = xlWB.Worksheets(1)
+    
+    For iterVal = valCol.Count To 3 Step -1
+    With xlWS
+        If .Range("K" & iterVal).Value <> "" Then
+            .Range("I" & iterVal).Value = .Range("K" & iterVal).Value
+            .Range("K" & iterVal).ClearContents
+            .Range("I" & iterVal).ClearFormats
+        End If
+    End With
+    Next iterVal
+
+End Sub
