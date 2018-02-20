@@ -1,0 +1,32 @@
+Option Explicit
+Sub MachineLearning()
+
+    Dim theta0 As Double, theta1 As Double, jTheta As Double, X As Double, y As Double
+    Dim m As Integer, i As Integer
+    
+    theta0 = (5 - -5 + 1) * Rnd + -5
+    theta1 = (5 - -5 + 1) * Rnd + -5
+    
+    m = Range(Range("A1"), Range("A1").End(xlDown)).Count
+    
+    jTheta = 0
+    
+    For i = 1 To m
+        X = Range("A" & i).Value
+        y = Range("B" & i).Value
+        jTheta = jTheta + costFunction(X, y, theta0, theta1, i)
+    Next
+        
+    MsgBox jTheta
+
+End Sub
+
+Public Function costFunction(X As Double, y As Double, theta0 As Double, theta1 As Double, m As Integer) As Double
+
+    Dim hTheta As Double: hTheta = theta0 + (theta1 * X)
+    Dim sqrErrors As Double: sqrErrors = (hTheta - y) ^ 2
+    Range("C" & m).Value = sqrErrors
+    
+    costFunction = sqrErrors
+
+End Function
