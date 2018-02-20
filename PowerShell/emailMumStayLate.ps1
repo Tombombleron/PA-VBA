@@ -12,8 +12,8 @@ $mail.subject = “I'll be home later than usual“
 $mail.body = “I've not left work yet because “ + $excuses[$rand] +" I'll see you later."
 
 #for multiple email, use semi-colon ; to separate
-$mail.To = “maureenjgreen@hotmail.co.uk"
-$mail.Cc = "robertogreen@hotmail.co.uk"
+$mail.To = “abc@hotmail.co.uk"
+$mail.Cc = "xyz@hotmail.co.uk"
 $mail.Send()
 
 #$o.Quit()
