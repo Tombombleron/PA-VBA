@@ -1,23 +1,36 @@
-Attribute VB_Name = "DashboardOne"
 Option Explicit
+Sub RunAllExports()
+
+    Dim caller As String: caller = "Run All Exports"
+
+    On Error GoTo errorEmail
+
+    CreditCardSummary
+    Overdue
+
+    MsgBox "All files have been successfully generated and saved", Title:="Data Generator"
+    Exit Sub
+    
+errorEmail:
+
+    CustomErrorHandler caller
+    Exit Sub
+
+End Sub
 Sub CreditCardSummary()
 
     Dim cleanerPath As String, cleanerName As String, _
         importPath As String, importName As String, _
-        outputPath As String, outputname As String, _
+        outputPath As String, outputName As String, _
         templatePath As String, templateName As String, _
         caller As String: caller = "Credit Card Summary"
     Dim arrayPath As Variant
-    Dim fs As Object: Set fs = CreateObject("Scripting.FileSystemObject")
     Dim cleanerWB As Workbook, importedWB As Workbook, templateWB As Workbook
     Dim cleanerWS As Worksheet, importedWS As Worksheet, templateWS As Worksheet
     Dim copyRange As Range, pasteRange As Range, col As Range
     Dim i As Long, copyRows As Long, pasteRows As Long, bottomRow As Long, colBottomRow As Long
     
-    With Application
-        .ScreenUpdating = False
-       ' .DisplayAlerts = False
-    End With
+    Application.ScreenUpdating = False
     
     On Error GoTo errorEmail
     
@@ -27,7 +40,7 @@ Sub CreditCardSummary()
         importPath = .Range("C5").Value
         importName = .Range("B5").Value
         outputPath = .Range("E5").Value
-        outputname = .Range("D5").Value
+        outputName = .Range("D5").Value
     End With
     
     ' create an array of all the import paths to allow for checking of final backslash
@@ -96,12 +109,10 @@ Sub CreditCardSummary()
                     End With
                     ' check whether the output file exists in the directory, if it does then
                     ' delete it so that we can export the new CSV with no warning messages
-                    With fs
-                        On Error Resume Next
-                        .DeleteFile outputPath & outputname
-                    End With
+                    On Error Resume Next
+                    DeleteFile outputPath, outputName
                     ' save the template csv as the output csv
-                    .SaveAs (outputPath & outputname)
+                    .SaveAs (outputPath & outputName)
                 End With
                     ' close the output csv
                     .Close SaveChanges:=True
@@ -121,6 +132,100 @@ errorEmail:
     CustomErrorHandler (caller)
     Exit Sub
     
+End Sub
+Sub Overdue()
+
+    Dim importPath As String, importName As String, _
+        cleanerPath As String, cleanerName As String, _
+        outputPath As String, outputName As String, _
+        templatePath As String, templateName As String, _
+        caller As String: caller = "Overdue"
+    Dim importWB As Workbook, cleanerWB As Workbook, templateWB As Workbook
+    Dim importWS As Worksheet, cleanerWS As Worksheet, templateWS As Worksheet
+    Dim arrayPath As Variant
+    Dim importEndRow As Long, importStartRow As Long: importStartRow = 2
+    Dim cleanerEndRow As Long, cleanerStartRow As Long: cleanerStartRow = 3
+    Dim cleanerRawBottomRow As Long, cleanerFormulaBottomRow As Long
+
+    Application.ScreenUpdating = False
+    
+    On Error GoTo errorEmail
+    
+    With ThisWorkbook.Worksheets(1)
+        importPath = .Range("C6").Value
+        importName = .Range("B6").Value
+        outputPath = .Range("E6").Value
+        outputName = .Range("D6").Value
+    End With
+    cleanerPath = "D:\Users\admin\Documents\txts, csvs, etcs\Cleaners\"
+    cleanerName = "ODCardsCleaner.xlsx"
+    
+    arrayPath = Array(importPath, cleanerPath, outputPath)
+    arrayPath = CheckFilePaths(arrayPath)
+    
+    importPath = arrayPath(0)
+    cleanerPath = arrayPath(1)
+    outputPath = arrayPath(2)
+    templatePath = outputPath
+    templateName = "ODCards_template.csv"
+    
+    Set importWB = Workbooks.Open(importPath & importName, ReadOnly:=False)
+    Set importWS = importWB.Worksheets(1)
+    Set cleanerWB = Workbooks.Open(cleanerPath & cleanerName, ReadOnly:=False)
+    Set cleanerWS = cleanerWB.Worksheets(1)
+    Set templateWB = Workbooks.Open(templatePath & templateName, ReadOnly:=False)
+    Set templateWS = templateWB.Worksheets(1)
+    
+    With cleanerWB
+        .Activate
+        With cleanerWS
+            .Range(Range("A3"), Range("L3").End(xlDown)).ClearContents
+            With importWB
+                With importWS
+                    .Activate
+                    importEndRow = .Range("A2").End(xlDown).Row
+                End With
+            End With
+            cleanerEndRow = importEndRow + 1
+            With .Range("A" & cleanerStartRow & ":L" & cleanerEndRow)
+                .NumberFormat = "@"
+                .Value = importWS.Range("A" & importStartRow & ":L" & importEndRow).Value
+            End With
+            importWB.Close SaveChanges:=False
+            .Activate
+            cleanerRawBottomRow = cleanerEndRow
+            cleanerFormulaBottomRow = .Range("N3").End(xlDown).Row
+            If cleanerRawBottomRow > cleanerFormulaBottomRow Then
+                .Range("N" & cleanerRawBottomRow & ":Y" & cleanerFormulaBottomRow).FillDown
+            End If
+            With templateWB
+                With templateWS
+                    .Activate
+                    With .Range("A" & importStartRow & ":L" & importEndRow)
+                        .NumberFormat = "@"
+                        .Value = cleanerWS.Range("N" & cleanerStartRow & ":Y" & cleanerFormulaBottomRow).Value
+                    End With
+                End With
+                On Error Resume Next
+                DeleteFile outputPath, outputName
+                On Error GoTo errorEmail
+                .SaveAs outputPath & outputName
+                .Close SaveChanges:=True
+            End With
+        End With
+        .Close SaveChanges:=True
+    End With
+    
+    Application.ScreenUpdating = True
+
+    Exit Sub
+    
+errorEmail:
+
+    CustomErrorHandler caller
+    
+    Exit Sub
+
 End Sub
 Public Function CheckFilePaths(arr As Variant) As Variant
     
@@ -160,12 +265,24 @@ Sub CustomErrorHandler(subName As String)
             Err.Description & _
             vbNewLine & vbNewLine & _
             "------------------------------------------------"
-        .To = "abc@gmail.com"
+        .To = "abc@gamil.com"
         .Importance = olImportanceHigh
         .Send
     End With
     
     Set oMail = Nothing
     Set oApp = Nothing
+    
+End Sub
+Sub DeleteFile(filePath As String, fileName As String)
+
+    Dim fs As Object: Set fs = CreateObject("Scripting.FileSystemObject")
+    
+    On Error Resume Next
+    
+    With fs
+        On Error Resume Next
+        .DeleteFile filePath & fileName
+    End With
     
 End Sub
