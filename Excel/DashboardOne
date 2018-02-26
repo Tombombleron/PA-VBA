@@ -1,0 +1,171 @@
+Attribute VB_Name = "DashboardOne"
+Option Explicit
+Sub CreditCardSummary()
+
+    Dim cleanerPath As String, cleanerName As String, _
+        importPath As String, importName As String, _
+        outputPath As String, outputname As String, _
+        templatePath As String, templateName As String, _
+        caller As String: caller = "Credit Card Summary"
+    Dim arrayPath As Variant
+    Dim fs As Object: Set fs = CreateObject("Scripting.FileSystemObject")
+    Dim cleanerWB As Workbook, importedWB As Workbook, templateWB As Workbook
+    Dim cleanerWS As Worksheet, importedWS As Worksheet, templateWS As Worksheet
+    Dim copyRange As Range, pasteRange As Range, col As Range
+    Dim i As Long, copyRows As Long, pasteRows As Long, bottomRow As Long, colBottomRow As Long
+    
+    With Application
+        .ScreenUpdating = False
+       ' .DisplayAlerts = False
+    End With
+    
+    On Error GoTo errorEmail
+    
+    cleanerPath = "D:\Users\admin\Documents\txts, csvs, etcs\Cleaners\"
+    cleanerName = "cr_Cards_t Cleaner.xlsx"
+    With ThisWorkbook.Worksheets(1)
+        importPath = .Range("C5").Value
+        importName = .Range("B5").Value
+        outputPath = .Range("E5").Value
+        outputname = .Range("D5").Value
+    End With
+    
+    ' create an array of all the import paths to allow for checking of final backslash
+    arrayPath = Array(cleanerPath, importPath, outputPath)
+    arrayPath = CheckFilePaths(arrayPath)
+    
+    cleanerPath = arrayPath(0)
+    importPath = arrayPath(1)
+    outputPath = arrayPath(2)
+    templatePath = outputPath
+    templateName = "CARDS_template.csv"
+    
+    ' opens the workbook which will sanitise the input data
+    Set cleanerWB = Workbooks.Open(cleanerPath & cleanerName, , False)
+    Set cleanerWS = cleanerWB.Worksheets(1)
+
+    Set importedWB = Workbooks.Open(importPath & importName, ReadOnly:=False)
+    Set importedWS = importedWB.Worksheets(1)
+    
+    Set templateWB = Workbooks.Open(templatePath & templateName, ReadOnly:=False)
+    Set templateWS = templateWB.Worksheets(1)
+
+    'clears the current raw data from the cleaning workbook
+    With cleanerWS
+        .Activate
+        Set pasteRange = .Range(Range("A4"), Range("E4").End(xlDown))
+        pasteRange.ClearContents
+    End With
+    
+    With importedWB
+        With importedWS
+            .Activate
+            Set copyRange = .Range(Range("A2"), Range("E2").End(xlDown))
+            ' copyRows counts the number of rows * 5 columns therefore dividing by 5
+            ' gives the true number of rows
+            copyRows = copyRange.Count / 5
+            ' the first row I want to paste in is row three, therefore adding three
+            ' to the range I'll paste to will give the same sized paste area as the copy area
+            pasteRows = copyRows + 3
+            With cleanerWS.Range("A4:E" & pasteRows)
+                .NumberFormat = "@"
+                .Value = copyRange.Value2
+            End With
+        End With
+        ' close the workbook of downloaded data
+        .Close SaveChanges:=False
+    End With
+    
+    ' get the bottom row of the data we have pasted
+    With cleanerWB
+        With cleanerWS
+            ' get the bottom most row of the cleaned data
+            .Activate
+            bottomRow = .Range("G4").End(xlDown).Row
+            ' fill formulas down if the raw data extends beyond the lowest formula row
+            If bottomRow > pasteRows Then
+                .Range(bottomRow & ":" & pasteRows).FillDown
+            End If
+            With templateWB
+                With templateWS
+                    .Activate
+                    With .Range(Range("A2"), Range("E" & pasteRows - 2))
+                        .NumberFormat = "@"
+                        .ClearContents
+                        .Value = cleanerWS.Range("M4:Q" & pasteRows).Value
+                    End With
+                    ' check whether the output file exists in the directory, if it does then
+                    ' delete it so that we can export the new CSV with no warning messages
+                    With fs
+                        On Error Resume Next
+                        .DeleteFile outputPath & outputname
+                    End With
+                    ' save the template csv as the output csv
+                    .SaveAs (outputPath & outputname)
+                End With
+                    ' close the output csv
+                    .Close SaveChanges:=True
+            End With
+            .Activate
+        End With
+        ' close the cleaner workbook
+        .Close SaveChanges:=True
+    End With
+
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+    
+errorEmail:
+    
+    CustomErrorHandler (caller)
+    Exit Sub
+    
+End Sub
+Public Function CheckFilePaths(arr As Variant) As Variant
+    
+    ' iterate through the above array and check that each file path has the correct format
+    ' if there is no backslash at the end of the string then add one, otherwise leave it
+    
+    Dim i As Long
+
+    For i = LBound(arr) To UBound(arr)
+        If Right(arr(i), 1) <> "\" Then
+            arr(i) = arr(i) & "\"
+        End If
+    Next i
+    
+    CheckFilePaths = arr
+
+End Function
+Sub CustomErrorHandler(subName As String)
+
+    ' if an error is raised during the execution of the procedure then
+    ' I will receive an email with a description of the error and when it
+    ' occurred.
+    Dim oApp As Outlook.Application
+    Dim oMail As MailItem
+    
+    Set oApp = CreateObject("Outlook.Application")
+    Set oMail = oApp.CreateItem(olMailItem)
+    
+    With oMail
+        .Subject = "VBA Error  | " & subName & " " & Err.Number
+        .Body = "The following error has been raised whilst running the " & subName & " procedure" & _
+            vbNewLine & _
+            "This error was raised at " & Now & _
+            vbNewLine & vbNewLine & _
+            "----------ERROR DESCRIPTION----------" & _
+            vbNewLine & vbNewLine & _
+            Err.Description & _
+            vbNewLine & vbNewLine & _
+            "------------------------------------------------"
+        .To = "abc@gmail.com"
+        .Importance = olImportanceHigh
+        .Send
+    End With
+    
+    Set oMail = Nothing
+    Set oApp = Nothing
+    
+End Sub
