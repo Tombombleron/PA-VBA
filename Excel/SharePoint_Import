@@ -1,5 +1,14 @@
-Attribute VB_Name = "deleteInactive"
+Sub Auto_Open()
+
+    removeOldCards
+
+End Sub
 Sub removeOldCards()
+    
+    ImportRawData
+    
+    On Error GoTo errorEmail
+    Dim caller As String: caller = "removeOldCards"
     
     Dim lastRow As Long, firstRow As Long, lngLastRow As Long, lastNameCell As Long
     Dim statusArr As Variant: statusArr = Array("A", "F", "B", "L")
@@ -28,7 +37,7 @@ Sub removeOldCards()
         ' if the email address is the company email address then insert everything
         ' before the @ symbol into column i and set the colour to white.
             emailVal = xlWS.Range("G" & lngLastRow).Value
-            If emailVal Like "*COMPANY_NAME*" Or emailVal Like "*company_name*" Then
+            If emailVal Like "*SAMSUNG*" Or emailVal Like "*samsung*" Then
             With xlWS.Range("I" & lngLastRow)
                 .Value = LCase(Left(emailVal, InStr(1, emailVal, "@", vbBinaryCompare) - 1))
                 .Interior.ColorIndex = 0
@@ -44,6 +53,8 @@ Sub removeOldCards()
         End If
     Next lngLastRow
     
+    On Error GoTo errorEmail
+    
     With xlWS
         .Activate
         .Columns("A:G").AutoFit
@@ -54,10 +65,33 @@ Sub removeOldCards()
     finalCardCount = ThisWorkbook.Worksheets(1).Range(Range("A3"), Range("A3").End(xlDown)).Count
     lastNameCell = xlWS.Range("I3000").End(xlUp).Row
     blankCount = WorksheetFunction.CountBlank(xlWS.Range("I3:I" & lastNameCell))
-    MsgBox "There are " & finalCardCount & " active credit cards." & vbNewLine & "There are " & blankCount & " blank values."
+    ' if there are any blanks then there is an exception and so an error is raised.
+    ' since we will go to successEmail on Error, I will be notified by email with the information in the below if statement.
+    If blankCount > 0 Then
+        Err.Raise 8008135, Description:="There are blanks within the file export. Please manually fill these blanks before uploading!"
+    End If
     
+    ' calls to subs which will export the file
+    ' and clean the workbook ready for the next import.
+    exportToGYSACSV
+    cleanColI
+    
+    ' success email will notify me that the script has run correctly and that the output file is ready to be imported.
+    GoTo successEmail
+    Exit Sub
+    
+successEmail:
+
+    SuccessHandler ThisWorkbook.Name, finalCardCount, blankCount
+    ThisWorkbook.Close SaveChanges:=True
     Application.ScreenUpdating = True
-    '~~~~~~~~~~~~~
+    Exit Sub
+
+errorEmail:
+
+    CustomErrorHandler caller
+    Exit Sub
+
 End Sub
 Function IsInArray(stringToBeFound As String, arr As Variant) As Boolean
   
@@ -66,11 +100,14 @@ Function IsInArray(stringToBeFound As String, arr As Variant) As Boolean
 End Function
 Sub exportToGYSACSV()
 
+    On Error GoTo errorEmail
+    Dim caller As String: caller = "exportTOGYSACSV"
+
     Dim xlWB As Workbook, thisWB As Workbook
     Dim xlWS As Worksheet, thisWS As Worksheet
     Dim knoxID As Range, numCCYLim As Range, targetPaste As Range
     Dim pasteLength As Long
-    Dim filePath As String, fileName As String: filePath = "D:\Users\admin\Documents\Import\"
+    Dim filePath As String, fileName As String: filePath = "D:\Users\r.green\Documents\GYSA Import\"
     
     fileName = "Exports\CC_CSVImport " & Format(Date, "dd-mm-yy") & ".csv"
     
@@ -115,17 +152,32 @@ Sub exportToGYSACSV()
         .Close (True)
     End With
     
-    MsgBox "The file has been exported to " & filePath & fileName
-    
     Application.ScreenUpdating = True
+    
+    Exit Sub
+    
+errorEmail:
+
+    CustomErrorHandler caller
+    Exit Sub
     
 End Sub
 Sub cleanColI()
+
+    On Error GoTo errorEmail
+    Dim caller As String: caller = "cleanColI"
 
     With ThisWorkbook.Worksheets(1).Range("A3:I10000")
         .ClearContents
         .ClearFormats
     End With
+    
+    Exit Sub
+    
+errorEmail:
+
+    CustomErrorHandler caller
+    Exit Sub
 
 End Sub
 Sub moveErrVals()
@@ -149,4 +201,106 @@ Sub moveErrVals()
     End With
     Next iterVal
 
+End Sub
+Sub ImportRawData()
+
+    On Error GoTo errorEmail
+    ' caller is simply the name of the sub procedure which will be passed to the
+    ' error handle and included in the notification email which is sent to me.
+    Dim caller As String: caller = "ImportRawData"
+
+    Dim importPath As String: importPath = "D:\Users\r.green\Downloads"
+    
+    Application.ScreenUpdating = False
+    
+        If Right(importPath, 1) <> "\" Then
+            importPath = importPath + "\"
+        End If
+    Dim importFile As String: importFile = "GYSA_import Delivery.xlsx"
+    Dim importWB As Workbook, targetWB As Workbook: Set targetWB = ThisWorkbook
+    Dim importWS As Worksheet, targetWS As Worksheet: Set targetWS = targetWB.Worksheets(1)
+    Dim importStartRow As Long, importEndRow As Long, targetStartRow As Long, targetEndRow As Long: targetStartRow = 3 'target start is the first row for pasting into
+    
+    Set importWB = Workbooks.Open(importPath & importFile, ReadOnly:=False)
+    Set importWS = importWB.Worksheets(1)
+
+    With importWB
+        .Activate
+        With importWS
+            importStartRow = 2
+            importEndRow = .Range("A1").End(xlDown).Row
+            targetEndRow = importEndRow + 1
+            With targetWS.Range("A" & targetStartRow & ":G" & targetEndRow)
+                .NumberFormat = "@"
+                .Value = importWS.Range("A" & importStartRow & ":G" & importEndRow).Value
+            End With
+        End With
+        .Close SaveChanges:=False
+    End With
+    
+    targetWB.Activate
+
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+    
+errorEmail:
+
+    CustomErrorHandler caller
+    Exit Sub
+
+End Sub
+Sub CustomErrorHandler(subName As String)
+
+    ' if an error is raised during the execution of the procedure then
+    ' I will receive an email with a description of the error and when it
+    ' occurred.
+    Dim oApp As Outlook.Application
+    Dim oMail As MailItem
+    
+    Set oApp = CreateObject("Outlook.Application")
+    Set oMail = oApp.CreateItem(olMailItem)
+    
+    With oMail
+        .Subject = "VBA Error | Sub: " & subName & " | Error Number: " & Err.Number
+        .Body = "The following error has been raised whilst running the " & subName & " procedure" & _
+            vbNewLine & _
+            "This error was raised at " & Now & _
+            vbNewLine & vbNewLine & _
+            "----------ERROR DESCRIPTION----------" & _
+            vbNewLine & vbNewLine & _
+            Err.Description & _
+            vbNewLine & vbNewLine & _
+            "------------------------------------------------"
+        .To = "r.green@partner.samsung.com"
+        .Importance = olImportanceHigh
+        .Send
+    End With
+    
+    Set oMail = Nothing
+    Set oApp = Nothing
+    
+End Sub
+Sub SuccessHandler(wbName As String, activeCards As String, blanks As String)
+
+    Dim oApp As Outlook.Application
+    Dim oMail As MailItem
+    
+    Set oApp = CreateObject("Outlook.Application")
+    Set oMail = oApp.CreateItem(olMailItem)
+    
+    With oMail
+        .To = "r.green@partner.samsung.com"
+        .Subject = "VBA Success | " & wbName
+        .Body = wbName & " has successfully run on " & Now & _
+            vbNewLine & vbNewLine & _
+            "There are " & activeCards & " active credit cards and " & blanks & " blank values within the exported file." & _
+            vbNewLine & vbNewLine & _
+            "If there are any blank values then something has gone very wrong, lol." & _
+            vbNewLine & vbNewLine & _
+            "Have a great day! :)"
+        .Importance = olImportanceHigh
+        .Send
+    End With
+    
 End Sub
