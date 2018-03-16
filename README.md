@@ -27,3 +27,7 @@ This sub procedure is called by a rule which runs on all incoming mail.
 Throughout the month I'm sporadically emailed notifications of people who are leaving the business, it is a hassle to find all these emails at the end of the month and manually enter each employee into a spreadsheet to forward on to bossman.
 
 This procedure, when the rule fires, automatically adds the email subject (including the employee name) to a workbook, and either creates a new sheet for a new month, or adds the strings to the sheet for the existing month.
+
+## SQL
+
+These contain a selection of queries (MS Access SQL syntax) which I created in the Access database.
