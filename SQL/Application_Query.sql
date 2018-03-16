@@ -2,7 +2,7 @@ SELECT [Employee ID],
         FirstName & " " & LastName as FullName,
         CostCentreCode,
         Department,
-Band
+        Band
 FROM ((ee_Employees_t a
 LEFT JOIN ee_IDCostCentre b
 ON (a.IDCostCentre = b.IDCostCentre))
