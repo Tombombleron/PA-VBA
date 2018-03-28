@@ -6,6 +6,9 @@ Public Sub sendOutlookMail()
     Dim OutApp As Object, OutMail As Object
     Dim testCount As Integer, emailCount As Integer, numSending As Integer
     Dim userInput As Variant
+    Dim startTime As Double, secondsElapsed As Double: startTime = Timer
+    Dim timeSaved As Double, cashSaved As Double, manualTime As Double
+    Dim emailString As String
     
     ' for convenience of the user, the file path (as copied from file explorer) is pasted in cell K3
     filePathToAdd = Range("K3").Value & "\"
@@ -87,11 +90,28 @@ Public Sub sendOutlookMail()
 
     Next cell
 
+    secondsElapsed = Round(Timer - startTime, 2) ' given in seconds
+    manualTime = emailCount * 150
+    timeSaved = Round((manualTime - secondsElapsed) / 3600, 2)
+    cashSaved = Round(timeSaved * 12.5, 2)
+    
     If emailCount = 1 Then
-        MsgBox "1 email has been generated and sent.", Title:="Emails"
+        emailString = " email has been generated and sent"
+        'MsgBox "1 email has been generated and sent.", Title:="Emails"
     ElseIf emailCount > 1 Then
-        MsgBox emailCount & " emails have been generated and sent.", Title:="Emails"
+        emailString = " emails have been generated and sent"
+        'MsgBox emailCount & " emails have been generated and sent.", Title:="Emails"
     End If
+    
+    MsgBox emailCount & emailString & _
+        vbNewLine & _
+        "------------------------------" & _
+        vbNewLine & _
+        "This has saved you " & timeSaved & " hours." & _
+        vbNewLine & _
+        "This has saved the company £" & cashSaved & " worth of labour." & _
+        vbNewLine & _
+        "------------------------------", Title:="Emails"
     
     ' successemail will notify me by email that the script has run successfully.
     ' partly for peace-of-mind, also for self-satisfaction. ¯\_("_/)_/¯
